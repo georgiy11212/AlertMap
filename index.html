@@ -1,0 +1,3019 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AlertMap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  @font-face {
+    font-family: 'e-Ukraine';
+    src:
+      local('e-Ukraine'),
+      local('e-Ukraine Regular'),
+      url('./fonts/e-Ukraine-Regular.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/fedrov/e-ukraine@main/fonts/woff2/e-Ukraine-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'e-Ukraine';
+    src:
+      local('e-Ukraine Medium'),
+      url('./fonts/e-Ukraine-Medium.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/fedrov/e-ukraine@main/fonts/woff2/e-Ukraine-Medium.woff2') format('woff2');
+    font-weight: 500 600;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'e-Ukraine';
+    src:
+      local('e-Ukraine Bold'),
+      url('./fonts/e-Ukraine-Bold.woff2') format('woff2'),
+      url('https://cdn.jsdelivr.net/gh/fedrov/e-ukraine@main/fonts/woff2/e-Ukraine-Bold.woff2') format('woff2');
+    font-weight: 700 800;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  :root {
+    --bg: #04070d;
+    --shell: #0b111c;
+    --card: #121b2c;
+    --card-2: #18243b;
+    --border: rgba(148, 163, 184, 0.16);
+    --border-strong: rgba(148, 163, 184, 0.34);
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #facc15;
+    --cyan: #38bdf8;
+    --font-ui: 'e-Ukraine', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --app-max-w: 1160px;
+    --app-margin: 14px auto;
+    --app-radius: 22px;
+    --map-h: 62vh;
+    --map-min-h: 495px;
+    --grid-cols: repeat(3, 1fr);
+    --btn-pad: 10px 12px;
+    --btn-font: 12.5px;
+    --sub-font: 11px;
+    --title-font: 16px;
+    --hud-font: 11.5px;
+    --legend-font: 11px;
+  }
+
+  body[data-device="laptop"] {
+    --app-max-w: 1160px;
+    --app-margin: 14px auto;
+    --app-radius: 22px;
+    --map-h: 62vh;
+    --map-min-h: 495px;
+    --grid-cols: repeat(3, 1fr);
+    --btn-pad: 10px 12px;
+    --btn-font: 12.5px;
+    --sub-font: 11px;
+    --title-font: 16px;
+    --hud-font: 11.5px;
+    --legend-font: 11px;
+  }
+
+  body[data-device="tablet"] {
+    --app-max-w: 840px;
+    --app-margin: 10px auto;
+    --app-radius: 18px;
+    --map-h: 54vh;
+    --map-min-h: 420px;
+    --grid-cols: repeat(2, 1fr);
+    --btn-pad: 12px 14px;
+    --btn-font: 13.5px;
+    --sub-font: 11.5px;
+    --title-font: 17px;
+    --hud-font: 12px;
+    --legend-font: 11.5px;
+  }
+
+  body[data-device="phone"] {
+    --app-max-w: 440px;
+    --app-margin: 6px auto;
+    --app-radius: 18px;
+    --map-h: 46vh;
+    --map-min-h: 320px;
+    --grid-cols: 1fr;
+    --btn-pad: 12px 14px;
+    --btn-font: 13.5px;
+    --sub-font: 11.5px;
+    --title-font: 15px;
+    --hud-font: 11px;
+    --legend-font: 10px;
+  }
+
+  @media (max-width: 520px) {
+    body[data-device="phone"] {
+      --app-max-w: 100%;
+      --app-margin: 0;
+      --app-radius: 0;
+    }
+  }
+
+  body[data-device="tv"] {
+    --app-max-w: 1840px;
+    --app-margin: 16px auto;
+    --app-radius: 26px;
+    --map-h: 75vh;
+    --map-min-h: 650px;
+    --grid-cols: repeat(2, 1fr);
+    --btn-pad: 15px 18px;
+    --btn-font: 16px;
+    --sub-font: 13px;
+    --title-font: 22px;
+    --hud-font: 14px;
+    --legend-font: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  *::-webkit-scrollbar { width: 7px; height: 7px; }
+  *::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.48); }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(56, 189, 248, 0.14), transparent 42%),
+      radial-gradient(circle at 88% 8%, rgba(239, 68, 68, 0.14), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(250, 204, 21, 0.06), transparent 50%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button, input, select { font-family: var(--font-ui); }
+  .tabular { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+
+  .app {
+    max-width: var(--app-max-w);
+    margin: var(--app-margin);
+    background: var(--shell);
+    border: 1px solid var(--border);
+    border-radius: var(--app-radius);
+    overflow: hidden;
+    box-shadow: 0 32px 95px rgba(0, 0, 0, 0.78), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    transition: max-width 0.25s ease, border-radius 0.25s ease;
+  }
+
+  body[data-device="phone"] .app {
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px 18px;
+    background: linear-gradient(180deg, rgba(24, 35, 55, 0.98), rgba(12, 18, 30, 0.98));
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  body[data-device="tv"] .head { padding: 18px 26px; }
+
+  .brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17.5px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  body[data-device="tv"] .brand { font-size: 24px; }
+
+  .demo-pill {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fde047;
+    background: rgba(250, 204, 21, 0.12);
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  body[data-device="tv"] .demo-pill { font-size: 12px; padding: 5px 12px; }
+
+  .device-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(8, 13, 22, 0.85);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    padding: 4px;
+    flex-wrap: wrap;
+  }
+
+  .dev-btn {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .dev-btn:hover {
+    color: var(--text);
+    background: rgba(148, 163, 184, 0.12);
+  }
+
+  .dev-btn.active-dev {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.18));
+    border-color: rgba(96, 165, 250, 0.65);
+    color: #e0f2fe;
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
+  }
+
+  body[data-device="tv"] .dev-btn { font-size: 14px; padding: 7px 13px; }
+
+  .head-right {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  .chip-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+
+  body[data-device="tv"] .chip-ctrl { font-size: 14.5px; padding: 9px 14px; }
+
+  .chip-ctrl:hover {
+    background: var(--card-2);
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+  }
+
+  .chip-ctrl.active-sound {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(96, 165, 250, 0.55);
+    color: #93c5fd;
+  }
+
+  .notif-btn {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(185, 28, 28, 0.12));
+    border-color: rgba(248, 113, 113, 0.42);
+    color: #fecaca;
+  }
+
+  .notif-btn:hover {
+    background: rgba(239, 68, 68, 0.28);
+    border-color: #f87171;
+  }
+
+  .notif-badge {
+    background: #ef4444;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 999px;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+  }
+
+  .notif-badge.zero {
+    background: rgba(148, 163, 184, 0.25);
+    color: #cbd5e1;
+    box-shadow: none;
+  }
+
+  .ticker-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 16px;
+    background: rgba(7, 11, 19, 0.96);
+    border-bottom: 1px solid var(--border);
+    font-size: 11.5px;
+    overflow: hidden;
+  }
+
+  .ticker-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #7dd3fc;
+    font-weight: 800;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .ticker-feed {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #cbd5e1;
+    font-weight: 500;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 16px;
+    background: rgba(14, 21, 33, 0.94);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  body[data-device="tv"] .toolbar { padding: 14px 26px; gap: 10px; }
+
+  .city-quick-btn {
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(245, 158, 11, 0.06));
+    color: #fde047;
+    border: 1px solid rgba(250, 204, 21, 0.34);
+    border-radius: 10px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  body[data-device="tv"] .city-quick-btn { font-size: 15px; padding: 10px 15px; }
+
+  .city-quick-btn:hover {
+    background: rgba(250, 204, 21, 0.25);
+    border-color: #fde047;
+    transform: translateY(-1px);
+  }
+
+  .city-quick-btn.selected-city {
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.7);
+    background: rgba(250, 204, 21, 0.28);
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 170px;
+  }
+
+  .search-box {
+    width: 100%;
+    background: #080d15;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  body[data-device="tv"] .search-box { font-size: 15px; padding: 10px 14px; }
+
+  .search-box:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+  }
+
+  .search-results {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #141d2e;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 2000;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+  }
+
+  .search-item {
+    padding: 9px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    transition: background 0.12s ease;
+  }
+
+  .search-item:last-child { border-bottom: 0; }
+  .search-item:hover { background: #1e2b42; }
+  .search-item small { color: var(--muted); font-size: 11px; }
+
+  .filter-select {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 7.5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+  }
+
+  body[data-device="tv"] .filter-select { font-size: 14.5px; padding: 10px 14px; }
+
+  .counter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(239, 68, 68, 0.14);
+    border: 1px solid rgba(248, 113, 113, 0.38);
+    color: #fecaca;
+    border-radius: 10px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  body[data-device="tv"] .counter-pill { font-size: 15px; padding: 10px 15px; }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+    animation: pulseDot 1.6s infinite;
+  }
+
+  @keyframes pulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.68; }
+  }
+
+  @keyframes redZonePulse {
+    0%, 100% { fill-opacity: 0.86; }
+    50% { fill-opacity: 0.64; }
+  }
+
+  .zone-red-pulse {
+    animation: redZonePulse 2.2s ease-in-out infinite;
+  }
+
+  .workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body[data-device="tv"] .workspace {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    align-items: stretch;
+  }
+
+  .map-stage {
+    position: relative;
+    overflow: hidden;
+  }
+
+  #map {
+    height: var(--map-h);
+    min-height: var(--map-min-h);
+    background: #060a11;
+    transition: height 0.2s ease, min-height 0.2s ease;
+  }
+
+  body[data-device="tv"] #map {
+    height: 100%;
+    min-height: var(--map-min-h);
+  }
+
+  .map-stage.light-stage #map { background: #e2e8f0; }
+
+  .leaflet-container {
+    background: inherit;
+    font-family: var(--font-ui) !important;
+  }
+
+  .leaflet-tooltip {
+    font-family: var(--font-ui) !important;
+    background: rgba(15, 23, 42, 0.97) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(148, 163, 184, 0.38) !important;
+    border-radius: 10px !important;
+    padding: 7px 11px !important;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.6) !important;
+    font-size: 12px !important;
+  }
+
+  .leaflet-control-attribution {
+    font-family: var(--font-ui) !important;
+    font-size: 9px !important;
+    background: rgba(9, 14, 22, 0.78) !important;
+    color: #94a3b8 !important;
+  }
+  .leaflet-control-attribution a { color: #cbd5e1 !important; }
+
+  .oblast-label {
+    pointer-events: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-family: var(--font-ui) !important;
+    color: rgba(248, 250, 252, 0.95);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+    text-shadow:
+      -1px -1px 2px #04060a,
+       1px -1px 2px #04060a,
+      -1px  1px 2px #04060a,
+       1px  1px 2px #04060a,
+       0    0   6px #000;
+  }
+
+  .map-stage.light-stage .oblast-label {
+    color: #0f172a;
+    text-shadow:
+      -1px -1px 2px rgba(255, 255, 255, 0.95),
+       1px -1px 2px rgba(255, 255, 255, 0.95),
+      -1px  1px 2px rgba(255, 255, 255, 0.95),
+       1px  1px 2px rgba(255, 255, 255, 0.95),
+       0    0   6px rgba(255, 255, 255, 0.9);
+  }
+
+  .oblast-label.city-lbl {
+    color: #fde047;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .map-stage.light-stage .oblast-label.city-lbl {
+    color: #92400e;
+    text-shadow:
+      -1px -1px 2px rgba(255, 255, 255, 0.98),
+       1px -1px 2px rgba(255, 255, 255, 0.98),
+      -1px  1px 2px rgba(255, 255, 255, 0.98),
+       1px  1px 2px rgba(255, 255, 255, 0.98),
+       0    0   7px rgba(255, 255, 255, 0.95);
+  }
+
+  .map-hud-top {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 650;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    max-width: calc(100% - 60px);
+  }
+
+  .hud-btn {
+    background: rgba(15, 23, 42, 0.9);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 9px;
+    padding: 6px 10px;
+    font-size: var(--hud-font);
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.15s ease;
+  }
+
+  body[data-device="tv"] .hud-btn { padding: 8px 13px; }
+
+  .hud-btn:hover {
+    background: rgba(30, 41, 59, 0.96);
+    border-color: rgba(250, 204, 21, 0.55);
+    color: #fde047;
+  }
+
+  .hud-btn.active-layer {
+    background: rgba(59, 130, 246, 0.28);
+    border-color: #60a5fa;
+    color: #bfdbfe;
+  }
+
+  .map-legend {
+    position: absolute;
+    left: 12px;
+    bottom: 24px;
+    z-index: 650;
+    max-width: calc(100% - 24px);
+    font-family: var(--font-ui);
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 12px;
+    padding: 9px 12px;
+    font-size: var(--legend-font);
+    font-weight: 500;
+    line-height: 1.55;
+    color: #e2e8f0;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48);
+    pointer-events: none;
+  }
+
+  body[data-device="phone"] .map-legend {
+    padding: 6px 9px;
+    bottom: 18px;
+    line-height: 1.4;
+  }
+
+  .map-legend div {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+
+  .lg-box {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .loading {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 29, 46, 0.96);
+    border: 1px solid var(--border-strong);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 800;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
+  }
+
+  .panel {
+    padding: 16px 18px;
+    background: linear-gradient(180deg, #131c2b, #0f1623);
+    border-top: 1px solid var(--border);
+  }
+
+  body[data-device="tv"] .panel {
+    border-top: 0;
+    border-left: 1px solid var(--border);
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  body[data-device="phone"] .stats-bar {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .stat-tile {
+    background: rgba(8, 13, 22, 0.72);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.15s ease;
+  }
+
+  .stat-tile:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-strong);
+  }
+
+  .stat-tile .st-val {
+    font-size: 13.5px;
+    font-weight: 800;
+    display: block;
+  }
+
+  .stat-tile .st-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    display: block;
+    margin-top: 1px;
+  }
+
+  .zone-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: rgba(8, 13, 22, 0.78);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    flex-wrap: wrap;
+  }
+
+  .zone-info .zone-title {
+    font-size: var(--title-font);
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.015em;
+  }
+
+  .zone-info .zone-sub {
+    font-size: var(--sub-font);
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .zone-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .timer-pill {
+    font-size: var(--sub-font);
+    font-weight: 700;
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.14);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 999px;
+    padding: 5px 11px;
+  }
+
+  .status-pill {
+    font-size: var(--btn-font);
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--card);
+    color: #e2e8f0;
+    border: 1px solid var(--border-strong);
+  }
+
+  .grid-btns {
+    display: grid;
+    grid-template-columns: var(--grid-cols);
+    gap: 8px;
+  }
+
+  body[data-device="tv"] .grid-btns { gap: 11px; }
+
+  .btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    padding: var(--btn-pad);
+    text-align: left;
+    font-weight: 700;
+    font-size: var(--btn-font);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn:hover {
+    background: var(--card-2);
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+  }
+
+  .btn:active { transform: scale(0.99); }
+
+  .btn small {
+    display: block;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 3px;
+    font-size: var(--sub-font);
+  }
+
+  .kbd-hint {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+
+  .btn.active-type {
+    outline: 2px solid #f8fafc;
+    background: #23314a;
+  }
+
+  .yel { border-left: 4px solid #eab308; }
+  .air { border-left: 4px solid #ef4444; }
+  .rad { border-left: 4px solid #facc15; }
+  .chem { border-left: 4px solid #a855f7; }
+  .art { border-left: 4px solid #f97316; }
+  .fight { border-left: 4px solid #10b981; }
+  .off {
+    border-left: 4px solid #64748b;
+    grid-column: 1 / -1;
+    background: rgba(30, 41, 59, 0.65);
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .actions button, .scenario-select {
+    flex: 1;
+    min-width: 135px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 11px;
+    padding: 10px 12px;
+    color: #fff;
+    font-weight: 700;
+    font-size: var(--btn-font);
+    cursor: pointer;
+    transition: filter 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  }
+
+  .scenario-select {
+    background: #1e293b;
+    color: #e2e8f0;
+    outline: none;
+  }
+
+  body[data-device="phone"] .actions button,
+  body[data-device="phone"] .scenario-select {
+    min-width: 100%;
+  }
+
+  body[data-device="tv"] .actions button,
+  body[data-device="tv"] .scenario-select {
+    padding: 13px 15px;
+    min-width: 180px;
+  }
+
+  .actions button:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+  .btn-ukraine-all {
+    background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+    border-color: rgba(248, 113, 113, 0.35) !important;
+  }
+  .btn-oblast-all { background: #991b1b; }
+  .btn-oblast-off { background: #166534; }
+  .btn-random { background: #1d4ed8; }
+  .btn-report { background: #0f766e; }
+  .hist { background: #334155; }
+  .clear-all { background: #273244; color: #e2e8f0; }
+  .danger-btn { background: #5c1d24; color: #fecaca; }
+
+  .active-strip {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(8, 13, 22, 0.68);
+    border: 1px solid var(--border);
+  }
+
+  .active-strip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: var(--sub-font);
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .active-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 92px;
+    overflow-y: auto;
+  }
+
+  .active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: var(--sub-font);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+
+  .active-chip:hover {
+    background: var(--card-2);
+    border-color: var(--accent);
+  }
+
+  .chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .footer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 18px;
+    font-size: var(--sub-font);
+    color: var(--muted);
+    background: #090e17;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  body[data-device="tv"] .footer-bar { padding: 14px 26px; }
+
+  .toast-stack {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: min(360px, calc(100vw - 32px));
+    pointer-events: none;
+  }
+
+  .toast-item {
+    background: rgba(15, 23, 42, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    border-left: 4px solid #38bdf8;
+    color: #f8fafc;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    animation: toastIn 0.2s ease;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modalback {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .modal {
+    width: min(100%, 580px);
+    max-height: 86vh;
+    overflow: auto;
+    background: #111827;
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.75);
+  }
+
+  body[data-device="tv"] .modal { width: min(100%, 760px); }
+
+  .mh {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: #111827;
+    z-index: 2;
+  }
+
+  .mh-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-right: 44px;
+  }
+
+  .mh h2 {
+    margin: 8px 44px 0 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+
+  .hist-meta-bar {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .hist-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .hist-tab {
+    background: #1f2937;
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 8px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .hist-tab.active {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: #60a5fa;
+    color: #fff;
+  }
+
+  .hist-total {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #fde047;
+  }
+
+  .clear-zone-hist-btn {
+    background: rgba(153, 27, 27, 0.35);
+    color: #fecaca;
+    border: 1px solid rgba(248, 113, 113, 0.35);
+    border-radius: 9px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .close {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    border: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #1f2937;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+  }
+
+  .history-list {
+    padding: 14px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .event {
+    padding: 14px 15px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-left: 4px solid #ef4444;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.88);
+  }
+
+  .event-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .event b {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .ev-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .ev-tag.active {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    border: 1px solid rgba(248, 113, 113, 0.4);
+  }
+
+  .ev-tag.done {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(52, 211, 153, 0.35);
+  }
+
+  .ev-times {
+    margin-top: 8px;
+    display: grid;
+    gap: 3px;
+  }
+
+  .event small {
+    color: var(--muted);
+    display: block;
+    font-size: 11.5px;
+  }
+
+  .duration {
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #e2e8f0;
+  }
+</style>
+</head>
+<body data-device="laptop">
+<div id="appShell" class="app">
+  <div class="head">
+    <div class="brand-wrap">
+      <div class="brand">🇺🇦 AlertMap PRO <span id="deviceBadge" class="demo-pill">💻 Ноутбук (1160px)</span></div>
+    </div>
+
+    <div class="device-switcher" role="group" aria-label="Вибір розміру інтерфейсу під пристрій">
+      <button id="dev-auto" class="dev-btn" onclick="setDeviceProfile('auto')" title="Автоматично під розмір екрана">🔄 Авто</button>
+      <button id="dev-phone" class="dev-btn" onclick="setDeviceProfile('phone')" title="Компактний режим для смартфона (440px)">📱 Смартфон</button>
+      <button id="dev-tablet" class="dev-btn" onclick="setDeviceProfile('tablet')" title="Режим для планшета (840px)">📟 Планшет</button>
+      <button id="dev-laptop" class="dev-btn" onclick="setDeviceProfile('laptop')" title="Стандартний режим для ноутбука (1160px)">💻 Ноутбук</button>
+      <button id="dev-tv" class="dev-btn" onclick="setDeviceProfile('tv')" title="Широкоформатний командний центр для телевізора (1840px)">📺 Телевізор</button>
+    </div>
+
+    <div class="head-right">
+      <button id="alertsCenterBtn" class="chip-ctrl notif-btn" onclick="showAlertsCenter()" title="Повідомлення про повітряну тривогу та загрози">
+        🔔 Сповіщення
+        <span id="unreadAlertsBadge" class="notif-badge zero">0</span>
+      </button>
+      <button class="chip-ctrl" onclick="toggleFullscreen()" title="Повноекранний режим (клавіша F)">⛶ Екран</button>
+      <button class="chip-ctrl" onclick="exportStateJson()" title="Експортувати стани та історію у JSON">📤 Експорт</button>
+      <button class="chip-ctrl" onclick="document.getElementById('importFileInput').click()" title="Імпортувати стан з JSON">📥 Імпорт</button>
+      <input id="importFileInput" type="file" accept=".json,application/json" style="display:none" onchange="importStateJson(this)">
+      <button id="soundToggle" class="chip-ctrl" onclick="toggleSound()">🔇 Звук: вимк.</button>
+      <div id="clock" class="chip-ctrl tabular">--:--:--</div>
+    </div>
+  </div>
+
+  <div class="ticker-bar">
+    <span class="ticker-badge">📡 Ефір</span>
+    <div id="tickerFeed" class="ticker-feed">Система готова. Оберіть район або місто на мапі для керування тривогами.</div>
+  </div>
+
+  <div class="toolbar">
+    <button id="btn-kyiv" class="city-quick-btn" onclick="selectCityDirect('м. Київ')">🏛️ м. Київ</button>
+    <button id="btn-zaporizhzhia" class="city-quick-btn" onclick="selectCityDirect('м. Запоріжжя')">🏙️ м. Запоріжжя</button>
+    <button id="btn-kharkiv" class="city-quick-btn" onclick="selectCityDirect('м. Харків')">🏙️ м. Харків</button>
+
+    <div class="search-wrap">
+      <input
+        id="searchInput"
+        class="search-box"
+        type="text"
+        placeholder="🔍 Пошук району або міста (/ для фокусу)..."
+        oninput="handleSearch(this.value)"
+        onfocus="handleSearch(this.value)"
+      >
+      <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <select id="threatFilter" class="filter-select" onchange="setFilterMode(this.value)" title="Фільтр загроз на карті">
+      <option value="all">Усі загрози</option>
+      <option value="active_only">Лише активні зони</option>
+      <option value="red">Лише 🔴 Червона</option>
+      <option value="yellow">Лише 🟡 Жовта</option>
+      <option value="artillery">Лише 🟠 Артобстріл</option>
+      <option value="chemical">Лише ☣️ Хімічна</option>
+      <option value="radiation">Лише ☢️ Радіаційна</option>
+      <option value="fighting">Лише 🟢 Бої</option>
+    </select>
+
+    <div class="counter-pill tabular">
+      <span class="pulse-dot"></span>
+      Активних зон: <span id="activeCount">0</span>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div id="mapStage" class="map-stage">
+      <div id="map"></div>
+      <div class="map-hud-top">
+        <button id="layer-dark" class="hud-btn active-layer" onclick="switchBaseLayer('dark')">🌑 Темна мапа</button>
+        <button id="layer-light" class="hud-btn" onclick="switchBaseLayer('light')">☀️ Світла мапа</button>
+        <button id="layer-topo" class="hud-btn" onclick="switchBaseLayer('topo')">🧭 Рельєфна мапа</button>
+        <button id="layer-satellite" class="hud-btn" onclick="switchBaseLayer('satellite')">🛰️ Супутникова мапа</button>
+        <button class="hud-btn" onclick="zoomStep(1.8)" title="Сильно наблизити">➕ Зум</button>
+        <button class="hud-btn" onclick="zoomStep(-1.8)" title="Віддалити">➖ Зум</button>
+        <button class="hud-btn" onclick="zoomToSelectedZone()">🎯 Наблизити зону</button>
+        <button class="hud-btn" onclick="resetMapView()">🗺️ Уся Україна</button>
+      </div>
+      <div id="loading" class="loading">Завантаження GeoJSON кордонів…</div>
+      <div class="map-legend">
+        <div><span class="lg-box" style="background:#ef4444"></span> Червона тривога</div>
+        <div><span class="lg-box" style="background:#eab308"></span> Жовтий рівень</div>
+        <div><span class="lg-box" style="background:#f97316"></span> Артобстріл</div>
+        <div><span class="lg-box" style="background:#a855f7"></span> Хімічна</div>
+        <div><span class="lg-box" style="background:#facc15"></span> Радіаційна</div>
+        <div><span class="lg-box" style="background:#10b981"></span> Вуличні бої</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div>
+        <div class="stats-bar">
+          <div class="stat-tile" onclick="setFilterMode('red')" title="Фільтр: Червона">
+            <span id="st-red" class="st-val tabular" style="color:#f87171">0</span>
+            <span class="st-lbl">🔴 Червона</span>
+          </div>
+          <div class="stat-tile" onclick="setFilterMode('yellow')" title="Фільтр: Жовта">
+            <span id="st-yellow" class="st-val tabular" style="color:#facc15">0</span>
+            <span class="st-lbl">🟡 Жовта</span>
+          </div>
+          <div class="stat-tile" onclick="setFilterMode('artillery')" title="Фільтр: Артобстріл">
+            <span id="st-artillery" class="st-val tabular" style="color:#fb923c">0</span>
+            <span class="st-lbl">🟠 Арт.</span>
+          </div>
+          <div class="stat-tile" onclick="setFilterMode('chemical')" title="Фільтр: Хімічна">
+            <span id="st-chemical" class="st-val tabular" style="color:#c084fc">0</span>
+            <span class="st-lbl">☣️ Хім.</span>
+          </div>
+          <div class="stat-tile" onclick="setFilterMode('radiation')" title="Фільтр: Радіаційна">
+            <span id="st-radiation" class="st-val tabular" style="color:#fde047">0</span>
+            <span class="st-lbl">☢️ Рад.</span>
+          </div>
+          <div class="stat-tile" onclick="setFilterMode('fighting')" title="Фільтр: Бої">
+            <span id="st-fighting" class="st-val tabular" style="color:#34d399">0</span>
+            <span class="st-lbl">🟢 Бої</span>
+          </div>
+        </div>
+
+        <div class="zone-card">
+          <div class="zone-info">
+            <div id="selected" class="zone-title">Обери район, м. Київ, м. Запоріжжя або м. Харків</div>
+            <div id="parentOblastLabel" class="zone-sub">Клікни по будь-якому району або місту • Клавіші: 1–6 загрози, 0 відбій, / пошук, R випадкова, F екран</div>
+          </div>
+          <div class="zone-badges">
+            <div id="liveDurationBadge" class="timer-pill tabular" style="display:none">⏱ Триває: 0 с</div>
+            <div id="currentStatusBadge" class="status-pill">Статус: не обрано</div>
+          </div>
+        </div>
+
+        <div class="grid-btns">
+          <button class="btn yel" id="btn-yellow" onclick="applyStatus('air','yellow')"><span class="kbd-hint">1</span>🟡 Жовтий рівень<small>підвищена увага / загроза БпЛА</small></button>
+          <button class="btn air" id="btn-red" onclick="applyStatus('air','red')"><span class="kbd-hint">2</span>🔴 Червоний рівень<small>повітряна тривога</small></button>
+          <button class="btn rad" id="btn-radiation" onclick="applyStatus('radiation','radiation')"><span class="kbd-hint">3</span>☢️ Радіаційна небезпека<small>радіаційний фон / загроза</small></button>
+          <button class="btn chem" id="btn-chemical" onclick="applyStatus('chemical','chemical')"><span class="kbd-hint">4</span>☣️ Хімічна загроза<small>хімічне забруднення</small></button>
+          <button class="btn art" id="btn-artillery" onclick="applyStatus('artillery','artillery')"><span class="kbd-hint">5</span>🟠 Артилерійська загроза<small>загроза артобстрілу</small></button>
+          <button class="btn fight" id="btn-fighting" onclick="applyStatus('fighting','fighting')"><span class="kbd-hint">6</span>🟢 Вуличні бої<small>бойові дії в межах громади</small></button>
+          <button class="btn off" onclick="stopAlert()"><span class="kbd-hint">0</span>🔕 Відбій для обраної зони<small>завершити активний статус і записати подію в журнал</small></button>
+        </div>
+
+        <div class="actions">
+          <button class="btn-ukraine-all" id="ukraineAlertBtn" onclick="applyToWholeUkraine()" title="Застосувати поточну обрану загрозу одразу до всіх зон України">🇺🇦 На всю Україну</button>
+          <button class="btn-oblast-all" id="oblastAlertBtn" onclick="applyToWholeOblast()" style="display:none">🚨 На всю область</button>
+          <button class="btn-oblast-off" id="oblastOffBtn" onclick="clearWholeOblast()" style="display:none">🔕 Відбій по області</button>
+          <button class="btn-random" onclick="simulateRandomThreat()">🎲 Випадкова тривога</button>
+          <select id="scenarioSelect" class="scenario-select" onchange="runPresetScenario(this.value)" title="Швидкий сценарій тривог">
+            <option value="">⚡ Сценарій симуляції...</option>
+            <option value="capital">🏛️ Столичний вузол (Київ + обл.)</option>
+            <option value="east_south">🔥 Схід та Південь (Харків, Запоріжжя, Дніпро, Одеса)</option>
+            <option value="north_center">🛸 Північ і Центр (БпЛА + тривога)</option>
+          </select>
+          <button class="btn-report" onclick="copyAlertSummary()">📋 Зведення</button>
+          <button class="hist" onclick="showHistory()">🕘 Історія зони</button>
+          <button class="clear-all" onclick="clearAllAlerts()">🧹 Відбій всюди</button>
+          <button class="danger-btn" onclick="clearAllHistory()">🗑️ Очистити історію</button>
+        </div>
+      </div>
+
+      <div class="active-strip">
+        <div class="active-strip-head">
+          <span>⚡ Швидкий перехід до активних зон</span>
+          <span id="activeStripSummary" class="tabular">0 активних</span>
+        </div>
+        <div id="activeZonesChips" class="active-chips">
+          <span style="color:var(--muted);font-size:11.5px">Наразі немає активних тривог.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span id="fontStatusLabel">Шрифт: <b>e-Ukraine, sans-serif</b> • Сповіщення про тривоги • Режими: Смартфон, Планшет, Ноутбук, Телевізор</span>
+    <span>Локальне збереження у браузері (DEMO)</span>
+  </div>
+</div>
+
+<div id="toastStack" class="toast-stack"></div>
+
+<div class="modalback" id="modal" onclick="if(event.target===this)closeHistory()">
+  <div class="modal">
+    <div class="mh">
+      <button class="close" onclick="closeHistory()">×</button>
+      <div class="mh-top">
+        <small>Журнал подій та тривалості тривог</small>
+        <button class="clear-zone-hist-btn" onclick="clearCurrentZoneHistory()">🗑️ Очистити історію</button>
+      </div>
+      <h2 id="historyTitle">Зона</h2>
+      <div class="hist-meta-bar">
+        <div class="hist-tabs">
+          <button id="htab-all" class="hist-tab active" onclick="setHistoryFilter('all')">Усі</button>
+          <button id="htab-active" class="hist-tab" onclick="setHistoryFilter('active')">Активні</button>
+          <button id="htab-done" class="hist-tab" onclick="setHistoryFilter('done')">Завершені</button>
+        </div>
+        <div id="historyTotalDuration" class="hist-total tabular">Сумарно: 0 с</div>
+      </div>
+    </div>
+    <div id="historyBody" class="history-list"></div>
+  </div>
+</div>
+
+<div class="modalback" id="alertsModal" onclick="if(event.target===this)closeAlertsCenter()">
+  <div class="modal">
+    <div class="mh">
+      <button class="close" onclick="closeAlertsCenter()">×</button>
+      <div class="mh-top">
+        <small>Вхідні повідомлення про повітряну тривогу та загрози</small>
+        <button class="clear-zone-hist-btn" onclick="clearAlertNotifications()">🗑️ Очистити сповіщення</button>
+      </div>
+      <h2>🔔 Сповіщення про тривоги</h2>
+      <div class="hist-meta-bar">
+        <div class="hist-tabs">
+          <button id="ntab-all" class="hist-tab active" onclick="setNotifFilter('all')">Усі</button>
+          <button id="ntab-air" class="hist-tab" onclick="setNotifFilter('air')">🔴 Повітряні</button>
+          <button id="ntab-other" class="hist-tab" onclick="setNotifFilter('other')">⚠️ Інші</button>
+        </div>
+        <div id="notifCountLabel" class="hist-total tabular">Повідомлень: 0</div>
+      </div>
+    </div>
+    <div id="alertsModalBody" class="history-list"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const BASE = 'https://cdn.jsdelivr.net/gh/darmat1/ukraine-geo-data@main/geodata/';
+const PREFIX = 'am25_';
+
+async function checkEUkraineFont() {
+  const labelEl = document.getElementById('fontStatusLabel');
+  if (!document.fonts || !document.fonts.ready) return;
+  await document.fonts.ready;
+  const loaded = [...document.fonts].some(f => f.family.toLowerCase().includes('e-ukraine') && f.status === 'loaded');
+  if (labelEl) {
+    labelEl.innerHTML = loaded
+      ? 'Шрифт: <b>e-Ukraine, sans-serif</b> (активний) • Сповіщення про тривоги'
+      : 'Шрифт: <b>e-Ukraine, sans-serif</b> (резерв Inter — покладіть .woff2 у ./fonts/ для офлайн)';
+  }
+}
+checkEUkraineFont();
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showToast(message, accentColor = '#38bdf8') {
+  const stack = document.getElementById('toastStack');
+  if (!stack) return;
+  const el = document.createElement('div');
+  el.className = 'toast-item';
+  el.style.borderLeftColor = accentColor;
+  el.textContent = message;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(8px)';
+    el.style.transition = 'all 0.2s ease';
+    setTimeout(() => el.remove(), 220);
+  }, 2700);
+}
+
+function pushTicker(text) {
+  const feed = document.getElementById('tickerFeed');
+  if (!feed) return;
+  const t = new Date().toLocaleTimeString('uk-UA');
+  feed.textContent = `[${t}] ${text}`;
+}
+
+function getNotifications() {
+  try { return JSON.parse(localStorage.getItem(PREFIX + 'notifications') || '[]'); } catch { return []; }
+}
+
+function saveNotifications(list) {
+  localStorage.setItem(PREFIX + 'notifications', JSON.stringify(list.slice(0, 120)));
+}
+
+function getUnreadCount() {
+  return Number(localStorage.getItem(PREFIX + 'unread_alerts') || '0');
+}
+
+function setUnreadCount(n) {
+  localStorage.setItem(PREFIX + 'unread_alerts', String(Math.max(0, n)));
+  syncUnreadBadge();
+}
+
+function syncUnreadBadge() {
+  const badge = document.getElementById('unreadAlertsBadge');
+  if (!badge) return;
+  const count = getUnreadCount();
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.classList.toggle('zero', count === 0);
+}
+
+function pushAlertNotification({ zone, oblast, code, title, detail, isAir }) {
+  const list = getNotifications();
+  const item = {
+    id: 'n' + Date.now() + Math.random().toString(16).slice(2, 6),
+    ts: Date.now(),
+    zone: zone || 'Україна',
+    oblast: oblast || '',
+    code: code || 'red',
+    title: title || 'Оголошено тривогу',
+    detail: detail || '',
+    isAir: Boolean(isAir)
+  };
+  list.unshift(item);
+  saveNotifications(list);
+  setUnreadCount(getUnreadCount() + 1);
+  if (document.getElementById('alertsModal').style.display === 'flex') {
+    renderAlertsCenter();
+  }
+}
+
+let notifFilterMode = 'all';
+
+function setNotifFilter(mode) {
+  notifFilterMode = mode;
+  document.getElementById('ntab-all').classList.toggle('active', mode === 'all');
+  document.getElementById('ntab-air').classList.toggle('active', mode === 'air');
+  document.getElementById('ntab-other').classList.toggle('active', mode === 'other');
+  renderAlertsCenter();
+}
+
+function renderAlertsCenter() {
+  const list = getNotifications();
+  const filtered = list.filter(item => {
+    if (notifFilterMode === 'air') return item.isAir;
+    if (notifFilterMode === 'other') return !item.isAir;
+    return true;
+  });
+
+  document.getElementById('notifCountLabel').textContent = `Повідомлень: ${filtered.length}`;
+  const body = document.getElementById('alertsModalBody');
+
+  if (!filtered.length) {
+    body.innerHTML = '<div class="event" style="border-left-color:#64748b"><b>Сповіщень про тривоги поки немає</b><small>Коли оголошується повітряна тривога або інша загроза, повідомлення з’являться тут.</small></div>';
+    return;
+  }
+
+  body.innerHTML = filtered.map(item => {
+    const borderColor = C[item.code] || '#ef4444';
+    const badgeCls = item.isAir ? 'active' : 'done';
+    const badgeTxt = item.isAir ? 'Повітряна тривога' : 'Загроза';
+    return `
+      <div class="event" style="border-left-color:${borderColor}">
+        <div class="event-head">
+          <b>${escapeHtml(item.title)}</b>
+          <span class="ev-tag ${badgeCls}">${badgeTxt}</span>
+        </div>
+        <div class="ev-times">
+          <small>Зона: <b>${escapeHtml(item.zone)}</b>${item.oblast && item.oblast !== item.zone ? ` (${escapeHtml(item.oblast)})` : ''}</small>
+          ${item.detail ? `<small>${escapeHtml(item.detail)}</small>` : ''}
+          <small class="tabular">Час надходження: ${new Date(item.ts).toLocaleString('uk-UA')}</small>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function showAlertsCenter() {
+  setUnreadCount(0);
+  renderAlertsCenter();
+  document.getElementById('alertsModal').style.display = 'flex';
+}
+
+function closeAlertsCenter() {
+  document.getElementById('alertsModal').style.display = 'none';
+}
+
+function clearAlertNotifications() {
+  saveNotifications([]);
+  setUnreadCount(0);
+  renderAlertsCenter();
+  showToast('Список сповіщень очищено', '#94a3b8');
+}
+
+const map = L.map('map', {
+  minZoom: 5,
+  maxZoom: 18,
+  zoomSnap: 0.1,
+  wheelPxPerZoomLevel: 60,
+  preferCanvas: false
+}).setView([48.7, 31.5], 6.4);
+
+map.attributionControl.addAttribution('GeoJSON: darmat1/ukraine-geo-data • CartoDB • Esri • OpenTopoMap');
+
+const DEVICE_META = {
+  phone:  { badge: '📱 Смартфон (440px)' },
+  tablet: { badge: '📟 Планшет (840px)' },
+  laptop: { badge: '💻 Ноутбук (1160px)' },
+  tv:     { badge: '📺 Телевізор (1840px)' }
+};
+
+let deviceSetting = localStorage.getItem(PREFIX + 'device') || 'auto';
+
+function detectAutoDevice() {
+  const w = window.innerWidth;
+  if (w < 640) return 'phone';
+  if (w <= 1024) return 'tablet';
+  if (w >= 1720) return 'tv';
+  return 'laptop';
+}
+
+function applyDeviceLayout() {
+  const effective = deviceSetting === 'auto' ? detectAutoDevice() : deviceSetting;
+  document.body.setAttribute('data-device', effective);
+
+  ['auto', 'phone', 'tablet', 'laptop', 'tv'].forEach(mode => {
+    const el = document.getElementById('dev-' + mode);
+    if (el) el.classList.toggle('active-dev', deviceSetting === mode);
+  });
+
+  const badge = document.getElementById('deviceBadge');
+  if (badge) {
+    const meta = DEVICE_META[effective] || DEVICE_META.laptop;
+    badge.textContent = deviceSetting === 'auto' ? `🔄 Авто • ${meta.badge}` : meta.badge;
+  }
+
+  setTimeout(() => {
+    map.invalidateSize({ animate: false });
+  }, 260);
+}
+
+function setDeviceProfile(mode) {
+  deviceSetting = mode;
+  localStorage.setItem(PREFIX + 'device', mode);
+  applyDeviceLayout();
+  const label = mode === 'auto' ? 'Автовизначення розміру' : (DEVICE_META[mode]?.badge || mode);
+  showToast(`Режим інтерфейсу: ${label}`);
+}
+
+function toggleFullscreen() {
+  const elem = document.getElementById('appShell');
+  if (!document.fullscreenElement) {
+    (elem.requestFullscreen || document.documentElement.requestFullscreen).call(elem).catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (deviceSetting === 'auto') {
+    applyDeviceLayout();
+  }
+});
+
+map.createPane('tilesPane');
+map.getPane('tilesPane').style.zIndex = 250;
+
+map.createPane('raionsPane');
+map.getPane('raionsPane').style.zIndex = 415;
+
+map.createPane('citiesPane');
+map.getPane('citiesPane').style.zIndex = 425;
+
+map.createPane('parentOblastPane');
+map.getPane('parentOblastPane').style.zIndex = 428;
+map.getPane('parentOblastPane').style.pointerEvents = 'none';
+
+map.createPane('selectedZonePane');
+map.getPane('selectedZonePane').style.zIndex = 432;
+map.getPane('selectedZonePane').style.pointerEvents = 'none';
+
+map.createPane('oblastBordersPane');
+map.getPane('oblastBordersPane').style.zIndex = 435;
+map.getPane('oblastBordersPane').style.pointerEvents = 'none';
+
+map.createPane('labelsPane');
+map.getPane('labelsPane').style.zIndex = 450;
+map.getPane('labelsPane').style.pointerEvents = 'none';
+
+const lightTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+  pane: 'tilesPane',
+  maxZoom: 18,
+  maxNativeZoom: 18,
+  opacity: 0.95
+});
+
+const topoTileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  pane: 'tilesPane',
+  maxZoom: 18,
+  maxNativeZoom: 15,
+  opacity: 0.72
+});
+
+const satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  pane: 'tilesPane',
+  maxZoom: 18,
+  maxNativeZoom: 17,
+  opacity: 0.96
+});
+
+let activeBaseMode = 'dark';
+
+function switchBaseLayer(mode) {
+  activeBaseMode = mode;
+  document.getElementById('layer-dark').classList.toggle('active-layer', mode === 'dark');
+  document.getElementById('layer-light').classList.toggle('active-layer', mode === 'light');
+  document.getElementById('layer-topo').classList.toggle('active-layer', mode === 'topo');
+  document.getElementById('layer-satellite').classList.toggle('active-layer', mode === 'satellite');
+
+  document.getElementById('mapStage').classList.toggle('light-stage', mode === 'light');
+
+  if (map.hasLayer(lightTileLayer)) map.removeLayer(lightTileLayer);
+  if (map.hasLayer(topoTileLayer)) map.removeLayer(topoTileLayer);
+  if (map.hasLayer(satelliteTileLayer)) map.removeLayer(satelliteTileLayer);
+
+  if (mode === 'light') {
+    lightTileLayer.addTo(map);
+  } else if (mode === 'topo') {
+    topoTileLayer.addTo(map);
+  } else if (mode === 'satellite') {
+    satelliteTileLayer.addTo(map);
+  }
+  refreshAllStyles();
+}
+
+function zoomStep(delta) {
+  const next = Math.min(18, Math.max(5, Number((map.getZoom() + delta).toFixed(2))));
+  map.setZoom(next);
+}
+
+const OBLASTS = [
+  'Вінницька область','Волинська область','Дніпропетровська область','Донецька область',
+  'Житомирська область','Закарпатська область','Запорізька область','Івано-Франківська область',
+  'Київська область','Кіровоградська область','Луганська область','Львівська область',
+  'Миколаївська область','Одеська область','Полтавська область','Рівненська область',
+  'Сумська область','Тернопільська область','Харківська область','Херсонська область',
+  'Хмельницька область','Черкаська область','Чернівецька область','Чернігівська область'
+];
+
+const SHORT_NAMES = {
+  'Вінницька область': 'Вінницька',
+  'Волинська область': 'Волинська',
+  'Дніпропетровська область': 'Дніпропетровська',
+  'Донецька область': 'Донецька',
+  'Житомирська область': 'Житомирська',
+  'Закарпатська область': 'Закарпатська',
+  'Запорізька область': 'Запорізька',
+  'Івано-Франківська область': 'Івано-Франківська',
+  'Київська область': 'Київська',
+  'Кіровоградська область': 'Кіровоградська',
+  'Луганська область': 'Луганська',
+  'Львівська область': 'Львівська',
+  'Миколаївська область': 'Миколаївська',
+  'Одеська область': 'Одеська',
+  'Полтавська область': 'Полтавська',
+  'Рівненська область': 'Рівненська',
+  'Сумська область': 'Сумська',
+  'Тернопільська область': 'Тернопільська',
+  'Харківська область': 'Харківська',
+  'Херсонська область': 'Херсонська',
+  'Хмельницька область': 'Хмельницька',
+  'Черкаська область': 'Черкаська',
+  'Чернівецька область': 'Чернівецька',
+  'Чернігівська область': 'Чернігівська',
+  'Автономна Республіка Крим': 'АР Крим'
+};
+
+const EXTRA_CITIES_CONFIG = [
+  {
+    zKey: 'м. Київ',
+    displayName: 'м. Київ',
+    parentOblast: 'Київська область',
+    nominatimQuery: 'Київ, Україна',
+    polyCoords: [
+      [30.24, 50.45],
+      [30.36, 50.58],
+      [30.55, 50.60],
+      [30.78, 50.52],
+      [30.82, 50.35],
+      [30.67, 50.24],
+      [30.42, 50.27],
+      [30.26, 50.36],
+      [30.24, 50.45]
+    ]
+  },
+  {
+    zKey: 'м. Запоріжжя',
+    displayName: 'м. Запоріжжя',
+    parentOblast: 'Запорізька область',
+    nominatimQuery: 'Запоріжжя, Запорізька область, Україна',
+    polyCoords: [
+      [34.96, 47.82],
+      [35.03, 47.92],
+      [35.16, 47.94],
+      [35.29, 47.89],
+      [35.35, 47.79],
+      [35.26, 47.72],
+      [35.11, 47.73],
+      [34.99, 47.76],
+      [34.96, 47.82]
+    ]
+  },
+  {
+    zKey: 'м. Харків',
+    displayName: 'м. Харків',
+    parentOblast: 'Харківська область',
+    nominatimQuery: 'Харків, Харківська область, Україна',
+    polyCoords: [
+      [36.06, 49.98],
+      [36.12, 50.08],
+      [36.26, 50.10],
+      [36.41, 50.04],
+      [36.43, 49.91],
+      [36.32, 49.85],
+      [36.15, 49.87],
+      [36.07, 49.92],
+      [36.06, 49.98]
+    ]
+  }
+];
+
+const C = {
+  yellow: '#eab308',
+  red: '#ef4444',
+  radiation: '#facc15',
+  chemical: '#a855f7',
+  artillery: '#f97316',
+  fighting: '#10b981',
+  off: '#263144'
+};
+
+const LABEL = {
+  yellow: '🟡 Жовтий рівень небезпеки',
+  red: '🔴 Повітряна тривога (червоний)',
+  radiation: '☢️ Радіаційна небезпека',
+  chemical: '☣️ Хімічна загроза',
+  artillery: '🟠 Артилерійська загроза',
+  fighting: '🟢 Вуличні бої',
+  off: '🔕 Відбій'
+};
+
+let currentKey = '';
+let currentDisplayName = '';
+let currentParentOblast = '';
+let lastSelectedThreat = { type: 'air', level: 'red' };
+let filterMode = 'all';
+let historyFilterMode = 'all';
+let soundEnabled = localStorage.getItem(PREFIX + 'sound') === '1';
+
+let interactiveGeoLayer = null;
+const cityGeoLayers = [];
+let oblastBordersLayer = null;
+let selectionOverlayGroup = L.layerGroup().addTo(map);
+let labelsLayerGroup = L.layerGroup().addTo(map);
+
+const oblastToRaions = {};
+const oblastFeatureMap = {};
+const zoneFeatureMap = {};
+const allZonesMeta = [];
+
+function slug(text) {
+  const m = {'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ye','ж':'zh','з':'z','и':'y','і':'i','ї':'yi','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ь':'','ю':'yu','я':'ya'};
+  return [...text.toLowerCase()].map(x => m[x] ?? x).join('').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+function sKey(id) { return PREFIX + 's_' + id; }
+function hKey(id) { return PREFIX + 'h_' + id; }
+
+function getH(id) {
+  try { return JSON.parse(localStorage.getItem(hKey(id)) || '[]'); } catch { return []; }
+}
+function putH(id, h) {
+  localStorage.setItem(hKey(id), JSON.stringify(h));
+}
+function getS(id) {
+  try { return JSON.parse(localStorage.getItem(sKey(id)) || 'null'); } catch { return null; }
+}
+
+function playTone(isAlarm) {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (isAlarm) {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(640, ctx.currentTime + 0.35);
+      osc.frequency.linearRampToValueAtTime(360, ctx.currentTime + 0.7);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.75);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.75);
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    }
+  } catch (e) {}
+}
+
+function syncSoundButton() {
+  const btn = document.getElementById('soundToggle');
+  btn.textContent = soundEnabled ? '🔊 Звук: увімк.' : '🔇 Звук: вимк.';
+  btn.classList.toggle('active-sound', soundEnabled);
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem(PREFIX + 'sound', soundEnabled ? '1' : '0');
+  syncSoundButton();
+  if (soundEnabled) playTone(false);
+}
+
+function setFilterMode(mode) {
+  filterMode = mode;
+  const sel = document.getElementById('threatFilter');
+  if (sel) sel.value = mode;
+  refreshAllStyles();
+}
+
+function syncUkraineButtonLabel() {
+  const btn = document.getElementById('ukraineAlertBtn');
+  if (!btn) return;
+  const code = lastSelectedThreat.level || lastSelectedThreat.type || 'red';
+  const shortMap = {
+    yellow: '🟡 Жовтий',
+    red: '🔴 Червоний',
+    radiation: '☢️ Радіація',
+    chemical: '☣️ Хімічна',
+    artillery: '🟠 Артобстріл',
+    fighting: '🟢 Бої'
+  };
+  btn.textContent = `🇺🇦 На всю Україну (${shortMap[code] || 'Тривога'})`;
+}
+
+function matchesCurrentFilter(s, code) {
+  if (!s) return false;
+  if (filterMode === 'all') return true;
+  if (filterMode === 'active_only') return true;
+  return code === filterMode;
+}
+
+function getZoneStyle(f) {
+  const props = f.properties || {};
+  const zKey = props._zKey;
+  const isCity = Boolean(props._isCityZone);
+  const s = getS(zKey);
+  const code = s ? (s.level || s.type || 'red') : null;
+  const matchesFilter = matchesCurrentFilter(s, code);
+
+  const isSatellite = activeBaseMode === 'satellite';
+  const isLight = activeBaseMode === 'light';
+  const hasTileOverlay = activeBaseMode !== 'dark';
+
+  let fill = isCity ? '#334155' : (isLight ? '#cbd5e1' : C.off);
+  let fillOpacity = isLight
+    ? (isCity ? 0.35 : 0.24)
+    : (hasTileOverlay ? (isCity ? 0.55 : 0.28) : (isCity ? 0.96 : 0.92));
+
+  if (isCity && isSatellite) {
+    fill = 'transparent';
+    fillOpacity = 0;
+  }
+
+  if (s && matchesFilter) {
+    fill = C[code] || C.red;
+    fillOpacity = isCity && isSatellite ? 0.45 : (hasTileOverlay ? 0.72 : 0.88);
+  } else if (s && !matchesFilter) {
+    fill = isLight ? '#94a3b8' : '#1e293b';
+    fillOpacity = isCity && isSatellite ? 0 : (hasTileOverlay ? 0.2 : 0.45);
+  } else if (filterMode === 'active_only') {
+    fillOpacity = isSatellite ? 0 : 0.12;
+  }
+
+  const borderColor = isCity
+    ? (isLight ? '#1e293b' : '#f8fafc')
+    : (isLight ? '#475569' : (hasTileOverlay ? '#0f172a' : '#1e293b'));
+
+  return {
+    color: borderColor,
+    weight: isCity ? 2 : (hasTileOverlay ? 1.2 : 0.85),
+    opacity: 1,
+    fillColor: fill,
+    fillOpacity: fillOpacity,
+    className: (s && matchesFilter && code === 'red') ? 'zone-red-pulse' : ''
+  };
+}
+
+function applyStyleToGeoGroup(group) {
+  if (!group) return;
+  group.eachLayer(layer => {
+    if (layer.feature && typeof layer.setStyle === 'function') {
+      layer.setStyle(getZoneStyle(layer.feature));
+      const el = layer.getElement?.();
+      if (el) {
+        const s = getS(layer.feature.properties?._zKey);
+        const code = s ? (s.level || s.type || 'red') : null;
+        const activeRed = Boolean(s && code === 'red' && matchesCurrentFilter(s, code));
+        el.classList.toggle('zone-red-pulse', activeRed);
+      }
+    }
+  });
+}
+
+function updateSelectionOverlays() {
+  selectionOverlayGroup.clearLayers();
+
+  if (!currentKey || !zoneFeatureMap[currentKey]) return;
+
+  if (
+    currentParentOblast &&
+    currentParentOblast !== currentDisplayName &&
+    oblastFeatureMap[currentParentOblast]
+  ) {
+    L.geoJSON(oblastFeatureMap[currentParentOblast], {
+      pane: 'parentOblastPane',
+      interactive: false,
+      style: {
+        color: '#38bdf8',
+        weight: 2.3,
+        opacity: 0.9,
+        fillColor: '#38bdf8',
+        fillOpacity: 0.05
+      }
+    }).addTo(selectionOverlayGroup);
+  }
+
+  L.geoJSON(zoneFeatureMap[currentKey], {
+    pane: 'selectedZonePane',
+    interactive: false,
+    style: {
+      color: '#05080f',
+      weight: 4.6,
+      opacity: 0.96,
+      fillOpacity: 0
+    }
+  }).addTo(selectionOverlayGroup);
+
+  L.geoJSON(zoneFeatureMap[currentKey], {
+    pane: 'selectedZonePane',
+    interactive: false,
+    style: {
+      color: '#facc15',
+      weight: 2.5,
+      opacity: 1,
+      fillOpacity: 0
+    }
+  }).addTo(selectionOverlayGroup);
+}
+
+function collectActiveZones() {
+  const items = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(PREFIX + 's_')) {
+      const zKey = k.slice((PREFIX + 's_').length);
+      const st = getS(zKey);
+      if (st) {
+        items.push({ zKey, ...st });
+      }
+    }
+  }
+  return items;
+}
+
+function renderActiveZonesStrip() {
+  const chipsContainer = document.getElementById('activeZonesChips');
+  const summaryEl = document.getElementById('activeStripSummary');
+  const activeList = collectActiveZones();
+
+  summaryEl.textContent = activeList.length ? `${activeList.length} активних` : '0 активних';
+
+  const counts = { red: 0, yellow: 0, artillery: 0, chemical: 0, radiation: 0, fighting: 0 };
+  activeList.forEach(item => {
+    const code = item.level || item.type || 'red';
+    if (counts[code] !== undefined) counts[code]++;
+  });
+
+  Object.entries(counts).forEach(([code, val]) => {
+    const el = document.getElementById('st-' + code);
+    if (el) el.textContent = val;
+  });
+
+  if (!activeList.length) {
+    chipsContainer.innerHTML = '<span style="color:var(--muted);font-size:11.5px">Наразі немає активних тривог.</span>';
+    return;
+  }
+
+  chipsContainer.innerHTML = activeList.map(item => {
+    const code = item.level || item.type || 'red';
+    const dotColor = C[code] || C.red;
+    const label = escapeHtml(item.displayName || item.zKey);
+    const parent = escapeHtml(item.parentOblast || '');
+    return `
+      <button class="active-chip" onclick="selectZoneByKey(${JSON.stringify(item.zKey)})" title="${parent}">
+        <span class="chip-dot" style="background:${dotColor}"></span>
+        <span>${label}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectZoneByKey(zKey) {
+  const meta = zoneFeatureMap[zKey]?.properties;
+  if (meta) {
+    selectZone(meta._zKey, meta._displayName, meta._parentOblast);
+  }
+}
+
+function refreshAllStyles() {
+  syncUkraineButtonLabel();
+  applyStyleToGeoGroup(interactiveGeoLayer);
+  for (const cg of cityGeoLayers) {
+    applyStyleToGeoGroup(cg);
+  }
+  if (oblastBordersLayer) {
+    oblastBordersLayer.setStyle({
+      color: activeBaseMode === 'light' ? '#1e293b' : '#05080f',
+      weight: 2.4,
+      fillOpacity: 0
+    });
+  }
+  updateSelectionOverlays();
+  updateUIState();
+  updateActiveCounter();
+  updateLiveDurationBadge();
+  renderActiveZonesStrip();
+}
+
+function updateActiveCounter() {
+  document.getElementById('activeCount').textContent = collectActiveZones().length;
+}
+
+function updateLiveDurationBadge() {
+  const timerEl = document.getElementById('liveDurationBadge');
+  if (!currentKey) {
+    timerEl.style.display = 'none';
+    return;
+  }
+  const s = getS(currentKey);
+  if (!s || !s.activeId) {
+    timerEl.style.display = 'none';
+    return;
+  }
+  const h = getH(currentKey);
+  const activeEv = h.find(e => e.id === s.activeId && !e.end);
+  if (!activeEv) {
+    timerEl.style.display = 'none';
+    return;
+  }
+  timerEl.style.display = 'inline-block';
+  timerEl.textContent = '⏱ Триває: ' + fmt(Date.now() - activeEv.start);
+}
+
+function updateUIState() {
+  const titleEl = document.getElementById('selected');
+  const subEl = document.getElementById('parentOblastLabel');
+
+  if (!currentKey) {
+    titleEl.textContent = 'Обери район, м. Київ, м. Запоріжжя або м. Харків';
+    subEl.textContent = 'Клікни по будь-якому району або місту • Клавіші: 1–6 загрози, 0 відбій, / пошук, R випадкова, F екран';
+  } else {
+    titleEl.textContent = currentDisplayName;
+    subEl.textContent = (currentParentOblast && currentParentOblast !== currentDisplayName)
+      ? `У складі: ${currentParentOblast}`
+      : 'Окрема адміністративна одиниця';
+  }
+
+  document.getElementById('btn-kyiv').classList.toggle('selected-city', currentKey === 'м. Київ');
+  document.getElementById('btn-zaporizhzhia').classList.toggle('selected-city', currentKey === 'м. Запоріжжя');
+  document.getElementById('btn-kharkiv').classList.toggle('selected-city', currentKey === 'м. Харків');
+
+  const badge = document.getElementById('currentStatusBadge');
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active-type'));
+
+  if (!currentKey) {
+    badge.textContent = 'Статус: не обрано';
+    badge.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+    badge.style.color = '#cbd5e1';
+  } else {
+    const s = getS(currentKey);
+    if (s) {
+      const code = s.level || s.type;
+      badge.textContent = LABEL[code] || 'Активна тривога';
+      badge.style.borderColor = C[code] || '#ef4444';
+      badge.style.color = '#fff';
+      const activeBtn = document.getElementById('btn-' + code);
+      if (activeBtn) activeBtn.classList.add('active-type');
+    } else {
+      badge.textContent = '🔕 Немає тривоги';
+      badge.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+      badge.style.color = '#94a3b8';
+    }
+  }
+
+  const hasOblastRaions = Boolean(
+    currentParentOblast &&
+    oblastToRaions[currentParentOblast] &&
+    oblastToRaions[currentParentOblast].length > 1
+  );
+  document.getElementById('oblastAlertBtn').style.display = hasOblastRaions ? 'inline-block' : 'none';
+  document.getElementById('oblastOffBtn').style.display = hasOblastRaions ? 'inline-block' : 'none';
+}
+
+function selectZone(zKey, displayName, parentOblast) {
+  currentKey = zKey;
+  currentDisplayName = displayName;
+  currentParentOblast = parentOblast;
+  refreshAllStyles();
+}
+
+function selectCityDirect(cityName) {
+  if (zoneFeatureMap[cityName]) {
+    const meta = zoneFeatureMap[cityName].properties;
+    selectZone(meta._zKey, meta._displayName, meta._parentOblast);
+  }
+}
+
+function zoomToSelectedZone() {
+  if (!currentKey || !zoneFeatureMap[currentKey]) {
+    return showToast('Спочатку обери район або місто', '#facc15');
+  }
+  const bounds = L.geoJSON(zoneFeatureMap[currentKey]).getBounds();
+  if (bounds.isValid()) {
+    map.flyToBounds(bounds, { padding: [22, 22], maxZoom: 15.5, duration: 0.45 });
+  }
+}
+
+function resetMapView() {
+  if (oblastBordersLayer && oblastBordersLayer.getBounds().isValid()) {
+    map.flyToBounds(oblastBordersLayer.getBounds(), { padding: [10, 10], duration: 0.45 });
+  } else {
+    map.setView([48.7, 31.5], 6.4);
+  }
+}
+
+async function fetchCityPolygonFeature(cityCfg, ukrFeatures) {
+  if (cityCfg.zKey === 'м. Київ' && Array.isArray(ukrFeatures)) {
+    const kyivFromUkr = ukrFeatures.find(f => {
+      const n = f.properties?.name || '';
+      return n === 'Київ' || n === 'м. Київ';
+    });
+    if (kyivFromUkr && kyivFromUkr.geometry) {
+      return {
+        type: 'Feature',
+        properties: {
+          name: cityCfg.displayName,
+          _zKey: cityCfg.zKey,
+          _displayName: cityCfg.displayName,
+          _parentOblast: cityCfg.parentOblast,
+          _isCityZone: true,
+          _source: 'Ukraine GeoJSON'
+        },
+        geometry: kyivFromUkr.geometry
+      };
+    }
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1&limit=1&q=' +
+      encodeURIComponent(cityCfg.nominatimQuery);
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      const list = await res.json();
+      const first = Array.isArray(list) ? list[0] : null;
+      const gj = first?.geojson;
+      if (gj && (gj.type === 'Polygon' || gj.type === 'MultiPolygon')) {
+        return {
+          type: 'Feature',
+          properties: {
+            name: cityCfg.displayName,
+            _zKey: cityCfg.zKey,
+            _displayName: cityCfg.displayName,
+            _parentOblast: cityCfg.parentOblast,
+            _isCityZone: true,
+            _source: 'OSM GeoJSON'
+          },
+          geometry: gj
+        };
+      }
+    }
+  } catch (e) {}
+
+  return {
+    type: 'Feature',
+    properties: {
+      name: cityCfg.displayName,
+      _zKey: cityCfg.zKey,
+      _displayName: cityCfg.displayName,
+      _parentOblast: cityCfg.parentOblast,
+      _isCityZone: true,
+      _source: 'GeoJSON Polygon'
+    },
+    geometry: {
+      type: 'Polygon',
+      coordinates: [cityCfg.polyCoords]
+    }
+  };
+}
+
+async function initMapData() {
+  applyDeviceLayout();
+  syncSoundButton();
+  syncUkraineButtonLabel();
+  syncUnreadBadge();
+  const loader = document.getElementById('loading');
+  loader.style.display = 'block';
+
+  try {
+    const ukrRes = await fetch(BASE + 'Ukraine.geojson');
+    if (!ukrRes.ok) throw new Error('Ukraine.geojson error');
+    const ukrData = await ukrRes.json();
+
+    const raionPromises = OBLASTS.map(async ob => {
+      try {
+        const r = await fetch(BASE + slug(ob) + '.geojson');
+        if (!r.ok) return { ob, features: [] };
+        const d = await r.json();
+        return { ob, features: d.features || [] };
+      } catch {
+        return { ob, features: [] };
+      }
+    });
+
+    const cityGeoPromises = EXTRA_CITIES_CONFIG.map(cfg =>
+      fetchCityPolygonFeature(cfg, ukrData.features || [])
+    );
+
+    const [raionResults, cityFeatures] = await Promise.all([
+      Promise.all(raionPromises),
+      Promise.all(cityGeoPromises)
+    ]);
+
+    const allInteractiveFeatures = [];
+    allZonesMeta.length = 0;
+
+    for (const f of (ukrData.features || [])) {
+      const rawName = f.properties?.name || '';
+      if (rawName) {
+        oblastFeatureMap[rawName] = f;
+      }
+      if (rawName.includes('Крим')) {
+        const clone = JSON.parse(JSON.stringify(f));
+        clone.properties._zKey = 'АР Крим';
+        clone.properties._displayName = 'Автономна Республіка Крим';
+        clone.properties._parentOblast = 'АР Крим';
+        allInteractiveFeatures.push(clone);
+        zoneFeatureMap['АР Крим'] = clone;
+        allZonesMeta.push(clone.properties);
+      }
+    }
+
+    for (const { ob, features } of raionResults) {
+      oblastToRaions[ob] = [];
+      for (const f of features) {
+        const rName = f.properties?.name || 'Район';
+        const zKey = ob + '::' + rName;
+        const clone = JSON.parse(JSON.stringify(f));
+        clone.properties._zKey = zKey;
+        clone.properties._displayName = rName;
+        clone.properties._parentOblast = ob;
+        allInteractiveFeatures.push(clone);
+        zoneFeatureMap[zKey] = clone;
+        allZonesMeta.push(clone.properties);
+        oblastToRaions[ob].push({ key: zKey, name: rName });
+      }
+    }
+
+    for (const cf of cityFeatures) {
+      zoneFeatureMap[cf.properties._zKey] = cf;
+      allZonesMeta.push(cf.properties);
+    }
+
+    interactiveGeoLayer = L.geoJSON(
+      { type: 'FeatureCollection', features: allInteractiveFeatures },
+      {
+        pane: 'raionsPane',
+        interactive: true,
+        style: getZoneStyle,
+        onEachFeature: (f, l) => {
+          const { _zKey, _displayName, _parentOblast } = f.properties;
+          const tip = (_parentOblast && _parentOblast !== _displayName)
+            ? `<b>${escapeHtml(_displayName)}</b><br><span style="color:#94a3b8;font-size:11px">${escapeHtml(_parentOblast)}</span>`
+            : `<b>${escapeHtml(_displayName)}</b>`;
+          l.bindTooltip(tip, { sticky: true });
+
+          l.on('mouseover', () => {
+            if (currentKey !== _zKey) {
+              l.setStyle({ weight: 1.9, color: '#38bdf8' });
+            }
+          });
+
+          l.on('mouseout', () => {
+            l.setStyle(getZoneStyle(f));
+          });
+
+          l.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            selectZone(_zKey, _displayName, _parentOblast);
+          });
+        }
+      }
+    ).addTo(map);
+
+    cityGeoLayers.length = 0;
+    for (const cf of cityFeatures) {
+      const singleCityLayer = L.geoJSON(cf, {
+        pane: 'citiesPane',
+        interactive: true,
+        style: getZoneStyle,
+        onEachFeature: (feat, l) => {
+          const { _zKey, _displayName, _parentOblast, _source } = feat.properties;
+          l.bindTooltip(
+            `<b>${escapeHtml(_displayName)}</b><br><span style="color:#fde047;font-size:11px">${escapeHtml(_source || 'GeoJSON')} • ${escapeHtml(_parentOblast)}</span>`,
+            { sticky: true }
+          );
+          l.on('mouseover', () => {
+            if (currentKey !== _zKey) {
+              l.setStyle({ weight: 2.5, color: '#fde047' });
+            }
+          });
+          l.on('mouseout', () => {
+            l.setStyle(getZoneStyle(feat));
+          });
+          l.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            selectZone(_zKey, _displayName, _parentOblast);
+          });
+        }
+      }).addTo(map);
+      cityGeoLayers.push(singleCityLayer);
+    }
+
+    oblastBordersLayer = L.geoJSON(ukrData, {
+      pane: 'oblastBordersPane',
+      interactive: false,
+      style: {
+        color: '#05080f',
+        weight: 2.4,
+        fillOpacity: 0
+      },
+      onEachFeature: (f, l) => {
+        const rawName = f.properties?.name || '';
+        const shortTitle = SHORT_NAMES[rawName];
+        if (!shortTitle) return;
+
+        let center = l.getBounds().getCenter();
+        if (rawName === 'Київська область') {
+          center = L.latLng(center.lat - 0.42, center.lng - 0.15);
+        } else if (rawName === 'Запорізька область') {
+          center = L.latLng(center.lat - 0.14, center.lng + 0.12);
+        } else if (rawName === 'Харківська область') {
+          center = L.latLng(center.lat - 0.25, center.lng + 0.08);
+        }
+
+        const marker = L.marker(center, {
+          pane: 'labelsPane',
+          interactive: false,
+          icon: L.divIcon({
+            className: 'oblast-label',
+            html: escapeHtml(shortTitle),
+            iconSize: [116, 16],
+            iconAnchor: [58, 8]
+          })
+        });
+        labelsLayerGroup.addLayer(marker);
+      }
+    }).addTo(map);
+
+    for (const cf of cityFeatures) {
+      const layerBounds = L.geoJSON(cf).getBounds();
+      const c = layerBounds.getCenter();
+      const offsetLat = cf.properties._zKey === 'м. Київ' ? 0.18 : 0.14;
+      const cityMarker = L.marker([c.lat + offsetLat, c.lng], {
+        pane: 'labelsPane',
+        interactive: false,
+        icon: L.divIcon({
+          className: 'oblast-label city-lbl',
+          html: escapeHtml(cf.properties._displayName),
+          iconSize: [116, 16],
+          iconAnchor: [58, 8]
+        })
+      });
+      labelsLayerGroup.addLayer(cityMarker);
+    }
+
+    map.fitBounds(oblastBordersLayer.getBounds(), { padding: [10, 10] });
+    updateLabelVisibility();
+    refreshAllStyles();
+    pushTicker(`Завантажено ${allZonesMeta.length} адміністративних зон та міст України.`);
+  } catch (e) {
+    showToast('Не вдалося завантажити геодані. Перевір інтернет.', '#ef4444');
+  } finally {
+    loader.style.display = 'none';
+  }
+}
+
+function updateLabelVisibility() {
+  const z = map.getZoom();
+  const labels = document.querySelectorAll('.oblast-label');
+  labels.forEach(el => {
+    if (z < 5.5) {
+      el.style.fontSize = '8px';
+    } else if (z >= 8.5) {
+      el.style.fontSize = '13px';
+    } else {
+      el.style.fontSize = el.classList.contains('city-lbl') ? '11px' : '10px';
+    }
+  });
+}
+map.on('zoomend', updateLabelVisibility);
+
+function setStatusForZone(zKey, displayName, parentOblast, type, level) {
+  const old = getS(zKey);
+  const h = getH(zKey);
+  const now = Date.now();
+  if (old && old.activeId) {
+    const x = h.find(e => e.id === old.activeId);
+    if (x && !x.end) x.end = now;
+  }
+  const id = 'e' + now + Math.random().toString(16).slice(2, 7);
+  h.unshift({ id, type, level, start: now, end: null });
+  putH(zKey, h);
+  localStorage.setItem(sKey(zKey), JSON.stringify({ type, level, activeId: id, displayName, parentOblast }));
+}
+
+function clearStatusForZone(zKey) {
+  const s = getS(zKey);
+  const h = getH(zKey);
+  const now = Date.now();
+  if (s?.activeId) {
+    const x = h.find(e => e.id === s.activeId);
+    if (x && !x.end) x.end = now;
+    putH(zKey, h);
+  }
+  localStorage.removeItem(sKey(zKey));
+}
+
+function applyStatus(type, level) {
+  lastSelectedThreat = { type, level };
+  syncUkraineButtonLabel();
+  if (!currentKey) return showToast('Спочатку обери район або місто на мапі', '#facc15');
+  setStatusForZone(currentKey, currentDisplayName, currentParentOblast, type, level);
+  playTone(true);
+  refreshAllStyles();
+  const text = `${LABEL[level] || level} — ${currentDisplayName}`;
+  pushTicker(text);
+  showToast(text, C[level] || '#ef4444');
+  pushAlertNotification({
+    zone: currentDisplayName,
+    oblast: currentParentOblast,
+    code: level,
+    title: LABEL[level] || level,
+    detail: type === 'air' ? 'Повідомлення про повітряну тривогу у зоні' : 'Оголошено загрозу безпеки',
+    isAir: type === 'air'
+  });
+}
+
+function stopAlert() {
+  if (!currentKey) return showToast('Спочатку обери район або місто на мапі', '#facc15');
+  clearStatusForZone(currentKey);
+  playTone(false);
+  refreshAllStyles();
+  const text = `🔕 Відбій загрози — ${currentDisplayName}`;
+  pushTicker(text);
+  showToast(text, '#10b981');
+}
+
+function applyToWholeUkraine() {
+  if (!allZonesMeta.length) return;
+  const { type, level } = lastSelectedThreat;
+  for (const meta of allZonesMeta) {
+    setStatusForZone(meta._zKey, meta._displayName, meta._parentOblast, type, level);
+  }
+  playTone(true);
+  refreshAllStyles();
+  const text = `🇺🇦 Масштабна тривога по всій Україні: ${LABEL[level] || level}`;
+  pushTicker(text);
+  showToast(text, C[level] || '#ef4444');
+  pushAlertNotification({
+    zone: 'Уся Україна',
+    oblast: 'Усі регіони',
+    code: level,
+    title: `🇺🇦 ${LABEL[level] || level} по всій Україні`,
+    detail: `Задіяно ${allZonesMeta.length} зон`,
+    isAir: type === 'air'
+  });
+}
+
+function applyToWholeOblast() {
+  if (!currentParentOblast || !oblastToRaions[currentParentOblast]) return;
+  const { type, level } = lastSelectedThreat;
+  for (const r of oblastToRaions[currentParentOblast]) {
+    setStatusForZone(r.key, r.name, currentParentOblast, type, level);
+  }
+  playTone(true);
+  refreshAllStyles();
+  const text = `🚨 ${LABEL[level] || level} — вся ${currentParentOblast}`;
+  pushTicker(text);
+  showToast(text, C[level] || '#ef4444');
+  pushAlertNotification({
+    zone: currentParentOblast,
+    oblast: currentParentOblast,
+    code: level,
+    title: `${LABEL[level] || level} — вся область`,
+    detail: `Охоплено ${oblastToRaions[currentParentOblast].length} районів`,
+    isAir: type === 'air'
+  });
+}
+
+function clearWholeOblast() {
+  if (!currentParentOblast || !oblastToRaions[currentParentOblast]) return;
+  for (const r of oblastToRaions[currentParentOblast]) {
+    clearStatusForZone(r.key);
+  }
+  playTone(false);
+  refreshAllStyles();
+  const text = `🔕 Відбій по всій області: ${currentParentOblast}`;
+  pushTicker(text);
+  showToast(text, '#10b981');
+}
+
+function runPresetScenario(scenario) {
+  const selectEl = document.getElementById('scenarioSelect');
+  if (!scenario) return;
+
+  if (scenario === 'capital') {
+    if (zoneFeatureMap['м. Київ']) {
+      setStatusForZone('м. Київ', 'м. Київ', 'Київська область', 'air', 'red');
+    }
+    (oblastToRaions['Київська область'] || []).forEach(r => {
+      setStatusForZone(r.key, r.name, 'Київська область', 'air', 'red');
+    });
+    selectCityDirect('м. Київ');
+    pushTicker('Сценарій: Столичний вузол (м. Київ та Київська область)');
+    showToast('Активовано сценарій: Столичний вузол', '#ef4444');
+    pushAlertNotification({
+      zone: 'м. Київ та Київська область',
+      oblast: 'Київська область',
+      code: 'red',
+      title: '🔴 Повітряна тривога (Столичний вузол)',
+      detail: 'Активовано для м. Київ та районів Київської області',
+      isAir: true
+    });
+  } else if (scenario === 'east_south') {
+    ['м. Харків', 'м. Запоріжжя'].forEach(c => {
+      if (zoneFeatureMap[c]) {
+        const m = zoneFeatureMap[c].properties;
+        setStatusForZone(m._zKey, m._displayName, m._parentOblast, 'air', 'red');
+      }
+    });
+    ['Харківська область', 'Запорізька область', 'Дніпропетровська область', 'Одеська область'].forEach(ob => {
+      (oblastToRaions[ob] || []).forEach(r => setStatusForZone(r.key, r.name, ob, 'air', 'red'));
+    });
+    pushTicker('Сценарій: Схід та Південь України');
+    showToast('Активовано сценарій: Схід та Південь', '#ef4444');
+    pushAlertNotification({
+      zone: 'Схід та Південь України',
+      oblast: 'Харківська, Запорізька, Дніпропетровська, Одеська',
+      code: 'red',
+      title: '🔴 Повітряна тривога (Схід та Південь)',
+      detail: 'Хвиля тривог у східних та південних регіонах',
+      isAir: true
+    });
+  } else if (scenario === 'north_center') {
+    ['Чернігівська область', 'Сумська область', 'Полтавська область', 'Черкаська область'].forEach(ob => {
+      (oblastToRaions[ob] || []).forEach(r => setStatusForZone(r.key, r.name, ob, 'air', 'yellow'));
+    });
+    pushTicker('Сценарій: Північ і Центр (жовтий рівень загрози БпЛА)');
+    showToast('Активовано сценарій: Північ і Центр', '#eab308');
+    pushAlertNotification({
+      zone: 'Північ та Центр України',
+      oblast: 'Чернігівська, Сумська, Полтавська, Черкаська',
+      code: 'yellow',
+      title: '🟡 Жовтий рівень (Північ і Центр)',
+      detail: 'Підвищена увага через загрозу БпЛА',
+      isAir: true
+    });
+  }
+
+  playTone(true);
+  refreshAllStyles();
+  if (selectEl) selectEl.value = '';
+}
+
+function copyAlertSummary() {
+  const active = collectActiveZones();
+  const nowStr = new Date().toLocaleString('uk-UA');
+  if (!active.length) {
+    const emptyText = `🇺🇦 AlertMap PRO (${nowStr})\n🔕 Активних тривог немає.`;
+    navigator.clipboard?.writeText(emptyText).catch(() => {});
+    showToast('Зведення (відбій) скопійовано у буфер обміну', '#10b981');
+    return;
+  }
+
+  const lines = active.slice(0, 35).map(item => {
+    const code = item.level || item.type || 'red';
+    return `• ${item.displayName} (${item.parentOblast}) — ${LABEL[code] || code}`;
+  });
+  if (active.length > 35) {
+    lines.push(`...та ще ${active.length - 35} зон.`);
+  }
+
+  const report = `🇺🇦 Оперативне зведення AlertMap PRO (${nowStr})\nАктивних зон: ${active.length}\n\n${lines.join('\n')}`;
+  navigator.clipboard?.writeText(report).catch(() => {});
+  showToast(`Зведення (${active.length} зон) скопійовано!`, '#38bdf8');
+}
+
+function simulateRandomThreat() {
+  if (!allZonesMeta.length) return;
+  const threats = [
+    ['air', 'red'],
+    ['air', 'yellow'],
+    ['artillery', 'artillery'],
+    ['chemical', 'chemical'],
+    ['radiation', 'radiation'],
+    ['fighting', 'fighting']
+  ];
+  const pickZone = allZonesMeta[Math.floor(Math.random() * allZonesMeta.length)];
+  const [type, level] = threats[Math.floor(Math.random() * threats.length)];
+  lastSelectedThreat = { type, level };
+  setStatusForZone(pickZone._zKey, pickZone._displayName, pickZone._parentOblast, type, level);
+  selectZone(pickZone._zKey, pickZone._displayName, pickZone._parentOblast);
+  playTone(true);
+  const text = `🎲 ${LABEL[level] || level} — ${pickZone._displayName}`;
+  pushTicker(text);
+  showToast(text, C[level] || '#ef4444');
+  pushAlertNotification({
+    zone: pickZone._displayName,
+    oblast: pickZone._parentOblast,
+    code: level,
+    title: LABEL[level] || level,
+    detail: 'Автоматична симуляція тривоги',
+    isAir: type === 'air'
+  });
+}
+
+function clearAllAlerts() {
+  const active = collectActiveZones();
+  if (!active.length) return showToast('Активних тривог уже немає', '#94a3b8');
+  active.forEach(item => clearStatusForZone(item.zKey));
+  playTone(false);
+  refreshAllStyles();
+  pushTicker('🧹 Оголошено загальний відбій по всіх зонах України.');
+  showToast('Відбій оголошено по всій Україні', '#10b981');
+}
+
+function handleSearch(query) {
+  const box = document.getElementById('searchResults');
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  const matches = allZonesMeta
+    .filter(z => (z._displayName + ' ' + z._parentOblast).toLowerCase().includes(q))
+    .slice(0, 12);
+
+  if (!matches.length) {
+    box.innerHTML = '<div class="search-item"><small>Нічого не знайдено</small></div>';
+    box.style.display = 'block';
+    return;
+  }
+
+  box.innerHTML = matches.map((m, idx) => `
+    <div class="search-item" data-idx="${idx}">
+      <span><b>${escapeHtml(m._displayName)}</b></span>
+      <small>${escapeHtml(m._isCityZone ? 'GeoJSON місто' : (m._parentOblast !== m._displayName ? m._parentOblast : 'Регіон'))}</small>
+    </div>
+  `).join('');
+
+  box.querySelectorAll('.search-item[data-idx]').forEach(el => {
+    el.addEventListener('click', () => {
+      const item = matches[Number(el.dataset.idx)];
+      if (!item) return;
+      selectZone(item._zKey, item._displayName, item._parentOblast);
+      box.style.display = 'none';
+    });
+  });
+
+  box.style.display = 'block';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  const isTyping = tag === 'input' || tag === 'select' || tag === 'textarea';
+
+  if (e.key === 'Escape') {
+    closeHistory();
+    closeAlertsCenter();
+    document.getElementById('searchResults').style.display = 'none';
+  } else if (!isTyping && e.key === '/') {
+    e.preventDefault();
+    const inp = document.getElementById('searchInput');
+    inp.focus();
+    inp.select();
+  } else if (!isTyping && (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К')) {
+    simulateRandomThreat();
+  } else if (!isTyping && (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А')) {
+    toggleFullscreen();
+  } else if (!isTyping && e.key === '1') {
+    applyStatus('air', 'yellow');
+  } else if (!isTyping && e.key === '2') {
+    applyStatus('air', 'red');
+  } else if (!isTyping && e.key === '3') {
+    applyStatus('radiation', 'radiation');
+  } else if (!isTyping && e.key === '4') {
+    applyStatus('chemical', 'chemical');
+  } else if (!isTyping && e.key === '5') {
+    applyStatus('artillery', 'artillery');
+  } else if (!isTyping && e.key === '6') {
+    applyStatus('fighting', 'fighting');
+  } else if (!isTyping && e.key === '0') {
+    stopAlert();
+  }
+});
+
+function fmt(ms) {
+  if (ms == null) return 'Триває';
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return (h ? h + ' год ' : '') + (m ? m + ' хв ' : '') + sec + ' с';
+}
+
+function setHistoryFilter(mode) {
+  historyFilterMode = mode;
+  document.getElementById('htab-all').classList.toggle('active', mode === 'all');
+  document.getElementById('htab-active').classList.toggle('active', mode === 'active');
+  document.getElementById('htab-done').classList.toggle('active', mode === 'done');
+  renderHistoryModal();
+}
+
+function renderHistoryModal() {
+  const title = (currentParentOblast && currentParentOblast !== currentDisplayName)
+    ? `${currentDisplayName} (${currentParentOblast})`
+    : currentDisplayName;
+  document.getElementById('historyTitle').textContent = title;
+
+  const allEvents = getH(currentKey);
+  const now = Date.now();
+  const totalMs = allEvents.reduce((acc, ev) => acc + Math.max(0, (ev.end || now) - ev.start), 0);
+  document.getElementById('historyTotalDuration').textContent = 'Сумарно: ' + fmt(totalMs);
+
+  const filtered = allEvents.filter(e => {
+    if (historyFilterMode === 'active') return !e.end;
+    if (historyFilterMode === 'done') return Boolean(e.end);
+    return true;
+  });
+
+  const b = document.getElementById('historyBody');
+  b.innerHTML = filtered.length
+    ? filtered.map(e => {
+        const end = e.end || now;
+        const code = e.level || e.type;
+        const borderColor = C[code] || '#ef4444';
+        return `
+          <div class="event" style="border-left-color:${borderColor}">
+            <div class="event-head">
+              <b>${escapeHtml(LABEL[code] || e.type)}</b>
+              <span class="ev-tag ${e.end ? 'done' : 'active'}">${e.end ? 'Завершено' : 'Активна'}</span>
+            </div>
+            <div class="ev-times">
+              <small>Початок: ${new Date(e.start).toLocaleString('uk-UA')}</small>
+              ${e.end ? `<small>Відбій: ${new Date(e.end).toLocaleString('uk-UA')}</small>` : '<small>Статус: триває зараз</small>'}
+            </div>
+            <div class="duration tabular">
+              <span>${e.end ? '✅ Зафіксовано' : '🔴 У реальному часі'}</span>
+              <strong>Тривалість: ${fmt(end - e.start)}</strong>
+            </div>
+          </div>`;
+      }).join('')
+    : '<div class="event" style="border-left-color:#64748b"><b>Немає записів за обраним фільтром</b><small>Спробуй перемкнути вкладку фільтра або запустити тривогу для цієї зони.</small></div>';
+}
+
+function showHistory() {
+  if (!currentKey) return showToast('Спочатку обери район або місто на мапі', '#facc15');
+  renderHistoryModal();
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function clearCurrentZoneHistory() {
+  if (!currentKey) return;
+  localStorage.removeItem(hKey(currentKey));
+  renderHistoryModal();
+  showToast('Історію обраної зони очищено', '#94a3b8');
+}
+
+function clearAllHistory() {
+  const toDelete = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(PREFIX + 'h_')) toDelete.push(k);
+  }
+  if (!toDelete.length) {
+    showToast('Історія вже порожня', '#94a3b8');
+    return;
+  }
+  toDelete.forEach(k => localStorage.removeItem(k));
+  if (document.getElementById('modal').style.display === 'flex' && currentKey) {
+    renderHistoryModal();
+  }
+  showToast('Усю історію тривог очищено', '#10b981');
+}
+
+function closeHistory() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function exportStateJson() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    statuses: {},
+    history: {},
+    notifications: getNotifications()
+  };
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    if (k.startsWith(PREFIX + 's_')) {
+      payload.statuses[k.slice((PREFIX + 's_').length)] = getS(k.slice((PREFIX + 's_').length));
+    } else if (k.startsWith(PREFIX + 'h_')) {
+      payload.history[k.slice((PREFIX + 'h_').length)] = getH(k.slice((PREFIX + 'h_').length));
+    }
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `alertmap-state-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('JSON-файл стану експортовано', '#38bdf8');
+}
+
+function importStateJson(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result || '{}'));
+      if (data.statuses && typeof data.statuses === 'object') {
+        Object.entries(data.statuses).forEach(([zKey, val]) => {
+          if (val) localStorage.setItem(sKey(zKey), JSON.stringify(val));
+        });
+      }
+      if (data.history && typeof data.history === 'object') {
+        Object.entries(data.history).forEach(([zKey, arr]) => {
+          if (Array.isArray(arr)) putH(zKey, arr);
+        });
+      }
+      if (Array.isArray(data.notifications)) {
+        saveNotifications(data.notifications);
+      }
+      refreshAllStyles();
+      showToast('Стан та історію успішно імпортовано', '#10b981');
+    } catch {
+      showToast('Некоректний JSON-файл', '#ef4444');
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('uk-UA');
+  updateLiveDurationBadge();
+  if (document.getElementById('modal').style.display === 'flex' && currentKey) {
+    renderHistoryModal();
+  }
+}, 1000);
+document.getElementById('clock').textContent = new Date().toLocaleTimeString('uk-UA');
+
+initMapData();
+</script>
+</body>
+</html>
